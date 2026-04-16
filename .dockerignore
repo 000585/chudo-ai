@@ -1,0 +1,34 @@
+# Windows temp files
+*.tmp
+*.temp
+AppData/
+NTUSER.*
+Cookies/
+Local Settings/
+Application Data/
+
+# Python
+__pycache__/
+*.py[cod]
+*.class
+.Python
+venv/
+.env
+.venv/
+
+# IDE
+.idea/
+.vscode/
+
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Logs
+logs/
+*.log

@@ -1,0 +1,163 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHUDO AI</title>
+    <style>
+        body { font-family: system-ui; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+               min-height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; }
+        .card { background: white; padding: 40px; border-radius: 24px; width: 90%; max-width: 400px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+        h1 { margin: 0 0 8px 0; color: #1e1e2f; }
+        .sub { color: #666; margin-bottom: 28px; }
+        input { width: 100%; padding: 14px; margin: 8px 0; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 16px; }
+        button { width: 100%; padding: 16px; background: #667eea; color: white; border: none; border-radius: 12px; 
+                font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+        button:hover { background: #5a67d8; }
+        .error { color: #e53e3e; margin-top: 12px; font-size: 14px; }
+        .success { color: #38a169; margin-top: 12px; font-size: 14px; }
+        .tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid #eee; }
+        .tab { flex: 1; padding: 12px; background: none; border: none; cursor: pointer; font-weight: 600; color: #888; }
+        .tab.active { color: #667eea; border-bottom: 2px solid #667eea; }
+        .hidden { display: none; }
+        .profile { text-align: center; }
+        .avatar { font-size: 64px; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div id="authForm">
+        <h1>✨ CHUDO AI</h1>
+        <div class="sub">Твой AI-ассистент</div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('login')">Вход</button>
+            <button class="tab" onclick="showTab('register')">Регистрация</button>
+        </div>
+
+        <form id="loginForm">
+            <input type="email" id="loginEmail" placeholder="Email" required>
+            <input type="password" id="loginPassword" placeholder="Пароль" required>
+            <button type="submit">Войти</button>
+        </form>
+
+        <form id="registerForm" class="hidden">
+            <input type="text" id="regName" placeholder="Имя" required>
+            <input type="email" id="regEmail" placeholder="Email" required>
+            <input type="password" id="regPassword" placeholder="Пароль (мин. 8 символов)" required>
+            <button type="submit">Зарегистрироваться</button>
+        </form>
+        
+        <div id="message"></div>
+    </div>
+
+    <div id="profile" class="hidden profile">
+        <div class="avatar">👤</div>
+        <h2 id="pName"></h2>
+        <p id="pEmail" style="color: #666;"></p>
+        <div style="background: #f0f0f0; padding: 16px; border-radius: 12px; margin: 20px 0;">
+            <div>Подписка: <b id="pTier">free</b></div>
+            <div>Запросов сегодня: <b id="pRequests">20</b></div>
+        </div>
+        <button onclick="logout()" style="background: #edf2f7; color: #4a5568;">Выйти</button>
+    </div>
+</div>
+
+<script>
+    const API = '/api/v1/auth';
+    
+    function showTab(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
+        document.getElementById('registerForm').classList.toggle('hidden', tab !== 'register');
+        document.getElementById('message').textContent = '';
+    }
+
+    async function handleLogin(e) {
+        e.preventDefault();
+        const body = new URLSearchParams();
+        body.append('username', document.getElementById('loginEmail').value);
+        body.append('password', document.getElementById('loginPassword').value);
+        
+        try {
+            const res = await fetch(`${API}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: body
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Ошибка входа');
+            
+            localStorage.setItem('token', data.access_token);
+            showProfile();
+        } catch (err) {
+            document.getElementById('message').className = 'error';
+            document.getElementById('message').textContent = err.message;
+        }
+    }
+
+    async function handleRegister(e) {
+        e.preventDefault();
+        const payload = {
+            email: document.getElementById('regEmail').value,
+            full_name: document.getElementById('regName').value,
+            password: document.getElementById('regPassword').value
+        };
+        
+        try {
+            const res = await fetch(`${API}/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.detail || 'Ошибка регистрации');
+            }
+            document.getElementById('message').className = 'success';
+            document.getElementById('message').textContent = 'Успешно! Теперь войдите.';
+            showTab('login');
+        } catch (err) {
+            document.getElementById('message').className = 'error';
+            document.getElementById('message').textContent = err.message;
+        }
+    }
+
+    async function showProfile() {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        
+        try {
+            const res = await fetch(`${API}/me`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error('Сессия истекла');
+            
+            const user = await res.json();
+            document.getElementById('pName').textContent = user.full_name;
+            document.getElementById('pEmail').textContent = user.email;
+            document.getElementById('pTier').textContent = user.subscription_tier;
+            document.getElementById('pRequests').textContent = user.daily_requests_remaining;
+            
+            document.getElementById('authForm').classList.add('hidden');
+            document.getElementById('profile').classList.remove('hidden');
+        } catch (e) {
+            logout();
+        }
+    }
+
+    function logout() {
+        localStorage.removeItem('token');
+        document.getElementById('authForm').classList.remove('hidden');
+        document.getElementById('profile').classList.add('hidden');
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', handleLogin);
+    document.getElementById('registerForm').addEventListener('submit', handleRegister);
+    
+    // Проверяем токен при загрузке
+    if (localStorage.getItem('token')) showProfile();
+</script>
+</body>
+</html>
