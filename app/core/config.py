@@ -1,4 +1,5 @@
-﻿from pydantic_settings import BaseSettings
+﻿import os
+from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     APP_NAME: str = "CHUDO AI"
@@ -6,12 +7,12 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000
-    SECRET_KEY: str = "super-secret-key-change-in-production"
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "super-secret-key-change-in-production")
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-    DATABASE_URL: str = "postgresql://chudo:chudo_secure_password_2024@db:5432/chudo_db"
-    REDIS_URL: str = "redis://:redis_password_2024@redis:6379/0"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+    REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+    REDIS_URL: str = os.getenv("REDIS_URL", "")
 
     class Config:
         env_file = ".env"
