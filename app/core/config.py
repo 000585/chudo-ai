@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
     REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
     DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+    SYNC_DATABASE_URL: str = os.getenv("DATABASE_URL", "").replace("+asyncpg", "").replace("+aiopg", "")
     REDIS_URL: str = os.getenv("REDIS_URL", "")
 
     class Config:

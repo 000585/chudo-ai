@@ -16,17 +16,23 @@ from app.core.guardrails import get_redis
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print(f"?? Starting {settings.APP_NAME} v{settings.APP_VERSION}")
-    Base.metadata.create_all(bind=engine)
-    print("? Database tables verified")
+    print(f"🚀 Starting {settings.APP_NAME} v{settings.APP_VERSION}")
+    try:
+        Base.metadata.create_all(bind=engine, checkfirst=True)
+        print("✅ Database tables verified")
+    except Exception as e:
+        print(f"⚠️ Database init warning: {e}")
     try:
         r = get_redis()
-        r.ping()
-        print("? Redis connection verified")
+        if r:
+            r.ping()
+            print("✅ Redis connection verified")
+        else:
+            print("⚠️ Redis not configured")
     except Exception as e:
-        print(f"?? Redis connection failed: {e}")
+        print(f"⚠️ Redis connection failed: {e}")
     yield
-    print(f"?? Shutting down {settings.APP_NAME}")
+    print(f"🛑 Shutting down {settings.APP_NAME}")
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -78,7 +84,10 @@ async def health_check():
         db_status = "disconnected"
     try:
         r = get_redis()
-        r.ping()
+        if r:
+            r.ping()
+        else:
+            redis_status = "not_configured"
     except Exception:
         redis_status = "disconnected"
     return {
