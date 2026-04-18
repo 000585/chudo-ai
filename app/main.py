@@ -38,6 +38,20 @@ async def lifespan(app: FastAPI):
     try:
         await run_in_threadpool(_check_db_sync)
         logger.info("Database connection verified")
+        try:
+            from app.db.base import Base
+            from sqlalchemy.ext.asyncio import create_async_engine
+            db_url = settings.DATABASE_URL
+            if db_url.startswith("postgresql://"):
+                db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            elif db_url.startswith("postgres://"):
+                db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
+            tmp_engine = create_async_engine(db_url, pool_pre_ping=True)
+            async with tmp_engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("Database tables verified")
+        except Exception as e:
+            logger.error(f"Table creation check: {e}")
     except Exception as e:
         logger.error(f"Database connection failed: {e}")
         raise RuntimeError("Cannot start without database") from e

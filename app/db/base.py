@@ -12,3 +12,5 @@ def get_db():
         yield db
     finally:
         db.close()
+
+from app.models.message import Message
