@@ -8,7 +8,7 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 
 class ChatRequest(BaseModel):
     message: str
-    model: str = "llama3-70b-8192"  # дефолт GROQ
+    model: str = settings.GROQ_MODEL  # дефолт из env
 
 class ChatResponse(BaseModel):
     response: str
@@ -24,7 +24,7 @@ async def chat(request: ChatRequest):
     user_msg = request.message.strip()
     if not user_msg:
         raise HTTPException(status_code=422, detail="Empty message")
-    
+
     # Если есть GROQ ключ — реальный AI-запрос
     if settings.GROQ_API_KEY:
         try:
@@ -42,13 +42,18 @@ async def chat(request: ChatRequest):
                         "temperature": 0.7
                     }
                 )
+                if r.status_code != 200:
+                    logger.error(f"GROQ HTTP {r.status_code}: {r.text}")
+                    raise HTTPException(status_code=502, detail="AI service unavailable")
                 data = r.json()
                 ai_text = data["choices"][0]["message"]["content"]
                 return ChatResponse(response=ai_text, model=request.model)
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"GROQ error: {e}")
             raise HTTPException(status_code=502, detail="AI service unavailable")
-    
+
     # Демо-режим (если GROQ_API_KEY не задан)
     logger.info(f"Demo mode: echo for '{user_msg[:50]}...'")
     return ChatResponse(

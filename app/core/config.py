@@ -1,4 +1,4 @@
-﻿import os
+import os
 from typing import List
 from pydantic_settings import BaseSettings
 
@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000
     
-    # Без дефолтов в production. Если env не задан — падаем при старте.
+    # ??? ???????? ? production. ???? env ?? ????? � ?????? ??? ??????.
     SECRET_KEY: str = os.getenv("SECRET_KEY", "")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
@@ -18,11 +18,12 @@ class Settings(BaseSettings):
     DATABASE_URL: str = os.getenv("DATABASE_URL", "")
     REDIS_URL: str = os.getenv("REDIS_URL", "")
     
-    # Список CORS-origins ( Railway сам добавит фронтенд-URL )
+    # ?????? CORS-origins ( Railway ??? ??????? ????????-URL )
     ALLOWED_ORIGINS: str = os.getenv("ALLOWED_ORIGINS", "*")
     
     # GROQ / Telegram / Stripe
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+    GROQ_MODEL: str = os.getenv('GROQ_MODEL', 'llama-3.1-8b-instant')
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
     TELEGRAM_CHAT_ID: str = os.getenv("TELEGRAM_CHAT_ID", "")
     STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")
@@ -33,13 +34,13 @@ class Settings(BaseSettings):
 
     @property
     def SYNC_DATABASE_URL(self) -> str:
-        """Убирает async-драйвер для Alembic и sync-коннектов."""
+        """??????? async-??????? ??? Alembic ? sync-?????????."""
         if not self.DATABASE_URL:
             return ""
         url = self.DATABASE_URL
-        # Убираем asyncpg / aiopg
+        # ??????? asyncpg / aiopg
         url = url.replace("+asyncpg", "").replace("+aiopg", "")
-        # На всякий случай чистим дублирующий postgresql+
+        # ?? ?????? ?????? ?????? ??????????? postgresql+
         if url.startswith("postgresql+") and "async" in url:
             url = url.replace("postgresql+asyncpg", "postgresql")
         return url
@@ -51,6 +52,6 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-# Валидация: если SECRET_KEY пустой в production — падаем сразу
+# ?????????: ???? SECRET_KEY ?????? ? production � ?????? ?????
 if not settings.DEBUG and not settings.SECRET_KEY:
     raise RuntimeError("FATAL: SECRET_KEY must be set in production environment")
