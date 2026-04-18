@@ -95,9 +95,5 @@ app.include_router(chat_context.router, prefix="/api/v1")
 async def health_check():
     return {"status": "ok", "version": settings.APP_VERSION}
 
-@app.get("/")
-async def root():
-    return {"message": "Welcome to CHUDO AI", "docs": "/docs"}
-
 # Static files (must be LAST to not override API routes)
 app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
