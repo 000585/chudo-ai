@@ -14,3 +14,5 @@ def get_db():
         db.close()
 
 from app.models.message import Message
+
+from app.models.message import Message  # noqa: F401
