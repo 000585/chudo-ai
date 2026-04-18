@@ -1,3 +1,4 @@
+from app.api import chat_context
 ﻿import os
 import time
 import logging
@@ -137,6 +138,22 @@ async def root():
         "health": "/health"
     }
 
+
+@app.on_event("startup")
+async def startup_event():
+    import app.models.message
+    from app.db.base import Base
+    from app.core.config import settings
+    from sqlalchemy.ext.asyncio import create_async_engine
+    db_url = settings.DATABASE_URL
+    if db_url.startswith("postgresql://"):
+        db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
+    engine = create_async_engine(db_url, pool_pre_ping=True)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
@@ -145,3 +162,4 @@ if __name__ == "__main__":
         port=settings.API_PORT,
         reload=settings.DEBUG
     )
+app.include_router(chat_context.router, prefix="/api/v1")
