@@ -88,6 +88,7 @@ app.add_middleware(
 
 # Routers
 app.include_router(auth_router, prefix="/api/v1")
+app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(chat_context.router, prefix="/api/v1")
 
