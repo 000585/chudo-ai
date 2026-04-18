@@ -88,7 +88,6 @@ app.add_middleware(
 
 # Routers
 app.include_router(auth_router, prefix="/api/v1")
-app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(chat_context.router, prefix="/api/v1")
 
@@ -99,3 +98,6 @@ async def health_check():
 @app.get("/")
 async def root():
     return {"message": "Welcome to CHUDO AI", "docs": "/docs"}
+
+# Static files (must be LAST to not override API routes)
+app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
