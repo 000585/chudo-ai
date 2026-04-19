@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, PlainTextResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 from fastapi.concurrency import run_in_threadpool
@@ -33,13 +33,32 @@ def _check_db_sync():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
+    logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION} [env={'dev' if settings.DEBUG else 'prod'}]")
+
     try:
         await run_in_threadpool(_check_db_sync)
         logger.info("Database connection verified")
+        
+        # Auto-create tables
+        try:
+            from app.db.base import Base
+            from sqlalchemy.ext.asyncio import create_async_engine
+            db_url = settings.DATABASE_URL
+            if db_url.startswith("postgresql://"):
+                db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            elif db_url.startswith("postgres://"):
+                db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
+            tmp_engine = create_async_engine(db_url, pool_pre_ping=True)
+            async with tmp_engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("Database tables verified")
+        except Exception as e:
+            logger.error(f"Table creation check: {e}")
+            
     except Exception as e:
-        logger.error(f"Database failed: {e}")
+        logger.error(f"Database connection failed: {e}")
         raise RuntimeError("Cannot start without database") from e
+
     try:
         r = get_redis()
         if r:
@@ -49,7 +68,9 @@ async def lifespan(app: FastAPI):
             logger.warning("Redis not configured")
     except Exception as e:
         logger.warning(f"Redis unavailable: {e}")
+
     yield
+
     logger.info(f"Shutting down {settings.APP_NAME}")
 
 app = FastAPI(
@@ -59,6 +80,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -67,9 +89,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# UTF-8 Middleware - FIX FOR ENCODING
+@app.middleware("http")
+async def add_charset(request: Request, call_next):
+    response = await call_next(request)
+    content_type = response.headers.get("content-type", "")
+    if "application/json" in content_type and "charset" not in content_type:
+        response.headers["content-type"] = "application/json; charset=utf-8"
+    return response
+
+# Routers
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(chat_context.router, prefix="/api/v1")
 
-# Static files MUST be LAST
-app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "version": settings.APP_VERSION}
+
+@app.get("/")
+async def root():
+    return {"message": "Welcome to CHUDO AI", "docs": "/docs"}
