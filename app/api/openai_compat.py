@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Request, HTTPException
+﻿from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 import uuid
@@ -30,14 +30,12 @@ async def openai_compatible(request: OpenAIRequest):
     if not user_message:
         raise HTTPException(status_code=400, detail="No user message found")
     
-    # Call existing chat service
-    from app.services.chat import process_chat_message
+    # Import and call existing chat function
+    from app.api.chat import chat as chat_func
+    from app.schemas.chat import ChatRequest
     
-    result = await process_chat_message(
-        message=user_message,
-        user_id=f"openclaw_{uuid.uuid4().hex[:8]}",
-        model=request.model
-    )
+    chat_request = ChatRequest(message=user_message, user_id=f"openclaw_{uuid.uuid4().hex[:8]}")
+    result = await chat_func(chat_request)
     
     # Format OpenAI-compatible response
     return {
@@ -49,13 +47,13 @@ async def openai_compatible(request: OpenAIRequest):
             "index": 0,
             "message": {
                 "role": "assistant",
-                "content": result.get("response", "No response")
+                "content": result.response if hasattr(result, 'response') else str(result)
             },
             "finish_reason": "stop"
         }],
         "usage": {
             "prompt_tokens": len(user_message.split()),
-            "completion_tokens": len(result.get("response", "").split()),
-            "total_tokens": len(user_message.split()) + len(result.get("response", "").split())
+            "completion_tokens": len(result.response.split()) if hasattr(result, 'response') else 0,
+            "total_tokens": len(user_message.split()) + (len(result.response.split()) if hasattr(result, 'response') else 0)
         }
     }
