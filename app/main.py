@@ -102,7 +102,8 @@ async def add_charset(request: Request, call_next):
 # Routers
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
-app.include_router(chat_context.router, prefix="/api/v1")`napp.include_router(openai_router)
+app.include_router(chat_context.router, prefix="/api/v1")
+app.include_router(openai_router)
 
 @app.get("/health")
 async def health_check():
