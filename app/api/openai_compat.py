@@ -31,10 +31,9 @@ async def openai_compatible(request: OpenAIRequest):
         raise HTTPException(status_code=400, detail="No user message found")
     
     # Import and call existing chat function
-    from app.api.chat import chat as chat_func
-    from app.schemas.chat import ChatRequest
+    from app.api.chat import ChatRequest, chat as chat_func
     
-    chat_request = ChatRequest(message=user_message, user_id=f"openclaw_{uuid.uuid4().hex[:8]}")
+    chat_request = ChatRequest(message=user_message, model=request.model)
     result = await chat_func(chat_request)
     
     # Format OpenAI-compatible response
