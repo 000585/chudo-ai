@@ -17,6 +17,7 @@ from sqlalchemy import text
 from app.api.auth import router as auth_router
 from app.api.chat import router as chat_router
 from app.api import chat_context
+from app.api.openai_compat import router as openai_router
 from app.db.base import engine, Base
 from app.core.config import settings
 from app.core.guardrails import get_redis
@@ -101,7 +102,7 @@ async def add_charset(request: Request, call_next):
 # Routers
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
-app.include_router(chat_context.router, prefix="/api/v1")
+app.include_router(chat_context.router, prefix="/api/v1")`napp.include_router(openai_router)
 
 @app.get("/health")
 async def health_check():
