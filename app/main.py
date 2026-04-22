@@ -109,6 +109,8 @@ app.include_router(openai_router)
 async def health_check():
     return {"status": "ok", "version": settings.APP_VERSION}
 
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
 @app.get("/")
 async def root():
-    return {"message": "Welcome to CHUDO AI", "docs": "/docs"}
+    return FileResponse("app/static/index.html")
